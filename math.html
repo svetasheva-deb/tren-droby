@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажер: Магія Мішаних Чисел</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Marck+Script&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Marck Script', cursive;
+            background-color: #f5f3ff;
+        }
+        .math-font {
+            font-family: 'Inter', sans-serif;
+        }
+        .workspace {
+            background-color: #fffef2;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .fraction-line {
+            height: 3px;
+            background-color: #1e293b;
+            width: 100%;
+            margin: 4px 0;
+        }
+        .sign-btn {
+            transition: all 0.2s;
+        }
+        .sign-btn:hover {
+            transform: scale(1.1);
+        }
+        .sign-btn.active {
+            background-color: #fbbf24;
+            color: white;
+            border-color: #f59e0b;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+
+    <header id="main-header" class="text-4xl text-indigo-800 mb-8 mt-10 text-center">
+        Магічні перетворення дробів
+    </header>
+
+    <div id="app" class="w-full max-w-4xl">
+        <div id="menu" class="flex flex-col gap-4 items-center">
+            <button onclick="startExercise('toImproper')" class="w-full sm:w-96 p-5 bg-indigo-500 text-white rounded-2xl text-2xl shadow-lg hover:bg-indigo-600 transition">
+                Мішане число → Неправильний дріб
+            </button>
+            <button onclick="startExercise('toMixed')" class="w-full sm:w-96 p-5 bg-orange-400 text-white rounded-2xl text-2xl shadow-lg hover:bg-orange-500 transition">
+                Виділення цілої частини
+            </button>
+           
+        </div>
+
+        <div id="exercise-zone" class="hidden flex flex-col items-center">
+            <div class="workspace w-full p-8 md:p-12 rounded-3xl shadow-xl border-2 border-indigo-100 mb-6">
+                
+                <div class="flex flex-wrap items-center justify-center gap-6 text-5xl math-font font-black">
+                    <div id="left-side" class="flex items-center gap-2"></div>
+
+                    <div id="center-operator" class="flex items-center justify-center min-w-[80px]">
+                        <div id="sign-box" class="hidden flex gap-2">
+                            <button onclick="selectSign('<')" class="sign-btn w-14 h-14 flex items-center justify-center bg-white border-2 border-indigo-200 rounded-lg text-3xl text-indigo-600 hover:border-indigo-500">&lt;</button>
+                            <button onclick="selectSign('=')" class="sign-btn w-14 h-14 flex items-center justify-center bg-white border-2 border-indigo-200 rounded-lg text-3xl text-indigo-600 hover:border-indigo-500">=</button>
+                            <button onclick="selectSign('>')" class="sign-btn w-14 h-14 flex items-center justify-center bg-white border-2 border-indigo-200 rounded-lg text-3xl text-indigo-600 hover:border-indigo-500">&gt;</button>
+                        </div>
+                        <span id="equal-sign" class="text-indigo-400 text-6xl">=</span>
+                    </div>
+
+                    <div id="right-side" class="flex items-center gap-2"></div>
+                </div>
+
+                <div id="solution-block" class="hidden mt-10 p-6 bg-white border-4 border-indigo-200 rounded-2xl text-2xl font-sans text-gray-700">
+                    <h3 class="font-['Marck_Script'] text-3xl text-indigo-600 mb-4">Алгоритм успіху:</h3>
+                    <div id="solution-text" class="leading-relaxed"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4 items-center">
+                <button id="btn-check" onclick="checkAnswer()" class="px-10 py-4 bg-gray-100 text-green-600 border-2 border-green-200 rounded-xl text-3xl font-bold hover:bg-green-50 transition">
+                    Перевірити
+                </button>
+                <button id="btn-next" onclick="generateTask()" class="hidden px-10 py-4 bg-orange-400 text-white rounded-xl text-3xl font-bold hover:bg-orange-500 transition">
+                    Наступне завдання
+                </button>
+                <button onclick="backToMenu()" class="px-6 py-4 text-indigo-400 text-xl hover:underline">
+                    До вибору вправи
+                </button>
+            </div>
+
+            <div class="mt-8 text-2xl text-indigo-800">
+                Твій успіх: <span id="score-display" class="font-bold">0</span> балів
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = '';
+        let currentTask = {};
+        let selectedSign = '';
+        let score = 0;
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function startExercise(mode) {
+            currentMode = mode;
+            document.getElementById('main-header').classList.add('hidden');
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('exercise-zone').classList.remove('hidden');
+            generateTask();
+        }
+
+        function backToMenu() {
+            document.getElementById('main-header').classList.remove('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+            document.getElementById('exercise-zone').classList.add('hidden');
+        }
+
+        function selectSign(sign) {
+            selectedSign = sign;
+            document.querySelectorAll('.sign-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText === sign) btn.classList.add('active');
+            });
+        }
+
+        function renderFraction(num, den, whole = null) {
+            let html = '';
+            if (whole !== null) html += `<span>${whole}</span>`;
+            html += `
+                <div class="flex flex-col items-center">
+                    <div>${num}</div>
+                    <div class="fraction-line"></div>
+                    <div>${den}</div>
+                </div>
+            `;
+            return html;
+        }
+
+        function generateTask() {
+            document.getElementById('solution-block').classList.add('hidden');
+            document.getElementById('btn-check').classList.remove('hidden');
+            document.getElementById('btn-next').classList.add('hidden');
+            selectedSign = '';
+            
+            const left = document.getElementById('left-side');
+            const right = document.getElementById('right-side');
+            const signBox = document.getElementById('sign-box');
+            const equalSign = document.getElementById('equal-sign');
+
+            // Скидання кнопок знаків
+            document.querySelectorAll('.sign-btn').forEach(btn => btn.classList.remove('active'));
+
+            if (currentMode === 'compare') {
+                signBox.classList.remove('hidden');
+                equalSign.classList.add('hidden');
+
+                // Генеруємо два числа для порівняння
+                const den = getRandomInt(3, 12);
+                const w1 = getRandomInt(2, 9);
+                const n1 = getRandomInt(1, den - 1);
+                
+                // Випадково вирішуємо: порівнюємо цілі частини чи чисельники
+                let w2, n2;
+                if (Math.random() > 0.5) {
+                    w2 = getRandomInt(2, 9); // Різні цілі
+                    n2 = getRandomInt(1, den - 1);
+                } else {
+                    w2 = w1; // Однакові цілі, різні чисельники
+                    n2 = getRandomInt(1, den - 1);
+                }
+
+                currentTask = { w1, n1, w2, n2, den };
+                left.innerHTML = renderFraction(n1, den, w1);
+                right.innerHTML = renderFraction(n2, den, w2);
+                
+                const val1 = w1 + (n1/den);
+                const val2 = w2 + (n2/den);
+                currentTask.correctSign = val1 > val2 ? '>' : (val1 < val2 ? '<' : '=');
+
+            } else {
+                signBox.classList.add('hidden');
+                equalSign.classList.remove('hidden');
+                
+                const whole = getRandomInt(2, 9);
+                const den = getRandomInt(3, 12);
+                const num = getRandomInt(1, den - 1);
+                currentTask = { whole, num, den, improperNum: whole * den + num };
+
+                if (currentMode === 'toImproper') {
+                    left.innerHTML = renderFraction(num, den, whole);
+                    right.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <input id="ans-num" type="number" class="w-20 text-center border-2 border-indigo-200 rounded-lg p-1 focus:border-indigo-500 outline-none">
+                            <div class="fraction-line"></div>
+                            <input id="ans-den" type="number" class="w-20 text-center border-2 border-indigo-200 rounded-lg p-1 focus:border-indigo-500 outline-none">
+                        </div>
+                    `;
+                } else if (currentMode === 'toMixed') {
+                    left.innerHTML = renderFraction(currentTask.improperNum, den);
+                    right.innerHTML = `
+                        <input id="ans-whole" type="number" class="w-20 text-center border-2 border-indigo-200 rounded-lg p-1 focus:border-indigo-500 outline-none">
+                        <div class="flex flex-col items-center">
+                            <input id="ans-num" type="number" class="w-20 text-center border-2 border-indigo-200 rounded-lg p-1 focus:border-indigo-500 outline-none">
+                            <div class="fraction-line"></div>
+                            <input id="ans-den" type="number" class="w-20 text-center border-2 border-indigo-200 rounded-lg p-1 focus:border-indigo-500 outline-none">
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function checkAnswer() {
+            let isCorrect = false;
+
+            if (currentMode === 'compare') {
+                if (selectedSign === currentTask.correctSign) isCorrect = true;
+            } else {
+                const uNum = parseInt(document.getElementById('ans-num').value);
+                const uDen = parseInt(document.getElementById('ans-den').value);
+                if (currentMode === 'toImproper') {
+                    if (uNum === currentTask.improperNum && uDen === currentTask.den) isCorrect = true;
+                } else {
+                    const uWhole = parseInt(document.getElementById('ans-whole').value);
+                    if (uWhole === currentTask.whole && uNum === currentTask.num && uDen === currentTask.den) isCorrect = true;
+                }
+            }
+
+            if (isCorrect) {
+                score += 10;
+                document.getElementById('score-display').innerText = score;
+                generateTask();
+            } else {
+                showSolution();
+            }
+        }
+
+        function showSolution() {
+            document.getElementById('btn-check').classList.add('hidden');
+            document.getElementById('btn-next').classList.remove('hidden');
+            const block = document.getElementById('solution-block');
+            const text = document.getElementById('solution-text');
+            block.classList.remove('hidden');
+
+            if (currentMode === 'toImproper') {
+                text.innerHTML = `
+                    1. Помнож цілу частину на знаменник: <b>${currentTask.whole} · ${currentTask.den} = ${currentTask.whole * currentTask.den}</b><br>
+                    2. Додай чисельник: <b>${currentTask.whole * currentTask.den} + ${currentTask.num} = ${currentTask.improperNum}</b><br>
+                    3. Запиши результат у чисельник, а знаменник залиши без змін: <b>${currentTask.den}</b>.
+                `;
+            } else if (currentMode === 'toMixed') {
+                text.innerHTML = `
+                    1. Поділи чисельник на знаменник з остачею: <b>${currentTask.improperNum} : ${currentTask.den}</b><br>
+                    2. Неповна частка <b>(${currentTask.whole})</b> — це ціла частина.<br>
+                    3. Остача <b>(${currentTask.num})</b> — це новий чисельник.<br>
+                    4. Знаменник залишається тим самим: <b>${currentTask.den}</b>.
+                `;
+            } else {
+                let reason = "";
+                if (currentTask.w1 !== currentTask.w2) {
+                    reason = `Порівнюємо цілі частини: <b>${currentTask.w1}</b> та <b>${currentTask.w2}</b>. Оскільки <b>${currentTask.w1} ${currentTask.correctSign} ${currentTask.w2}</b>, то і все число буде ${currentTask.correctSign === '>' ? 'більшим' : 'меншим'}.`;
+                } else {
+                    reason = `Цілі частини однакові <b>(${currentTask.w1})</b>. Порівнюємо чисельники: <b>${currentTask.n1}</b> та <b>${currentTask.n2}</b>. Оскільки <b>${currentTask.n1} ${currentTask.correctSign} ${currentTask.n2}</b>, то і все число буде ${currentTask.correctSign === '>' ? 'більшим' : 'меншим'}.`;
+                }
+                text.innerHTML = `<b>Правильна відповідь: ${currentTask.correctSign}</b><br>${reason}`;
+            }
+        }
+    </script>
+</body>
+</html>
